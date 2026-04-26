@@ -4,13 +4,6 @@
   "version": "1.0.0",
   "description": "Show two subtitle tracks simultaneously on Jellyfin with selectable text for Yomitan/Migaku.",
 
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "jellyfin-dual-subs@local.dev",
-      "strict_min_version": "109.0"
-    }
-  },
-
   "permissions": [
     "storage",
     "activeTab"
@@ -22,8 +15,7 @@
   ],
 
   "background": {
-    "service_worker": "src/background.js",
-    "scripts": ["src/background.js"]
+    "service_worker": "src/background.js"
   },
 
   "content_scripts": [

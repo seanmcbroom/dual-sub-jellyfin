@@ -1,4 +1,4 @@
-// background.js
+// src/background/index.js
 // Service worker. Handles cross-origin subtitle fetches (avoids CORS issues
 // in content scripts) and keeps a small in-memory cache.
 

@@ -1,0 +1,27 @@
+{
+  "name": "dual-sub-jellyfin",
+  "version": "1.0.0",
+  "description": "Show two subtitle tracks simultaneously on Jellyfin with selectable text for Yomitan/Migaku.",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.js",
+    "build:chrome": "node scripts/build.js --browser=chrome",
+    "build:firefox": "node scripts/build.js --browser=firefox",
+    "build:all": "npm run build:chrome && npm run build:firefox",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "test:watch": "node --experimental-vm-modules node_modules/.bin/jest --watch",
+    "zip:chrome": "npm run build:chrome && cd dist/chrome && zip -r ../../releases/dual-sub-jellyfin-chrome.zip .",
+    "zip:firefox": "npm run build:firefox && cd dist/firefox && zip -r ../../releases/dual-sub-jellyfin-firefox.zip .",
+    "zip:all": "mkdir -p releases && npm run zip:chrome && npm run zip:firefox"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {},
+    "testMatch": ["**/tests/**/*.test.js"]
+  }
+}

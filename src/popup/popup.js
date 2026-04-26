@@ -99,7 +99,7 @@ function wireControls() {
   $("first-on-pause").addEventListener("change", e =>
     updateSetting("firstOnPause", e.target.checked)
   );
-  
+
   $("secondary-on-pause").addEventListener("change", e =>
     updateSetting("secondaryOnPause", e.target.checked)
   );
@@ -173,6 +173,9 @@ function onTrackChange() {
 
 // ── UI Sync ──────────────────────────────────────
 function applySettingsToUI() {
+  $("primary-select").value = settings.primaryLang || "Auto";
+  $("secondary-select").value = settings.secondaryLang || "Auto";
+
   $("primary-offset").value = settings.primaryOffset || 0;
   $("secondary-offset").value = settings.secondaryOffset || 0;
 

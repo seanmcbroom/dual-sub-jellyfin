@@ -1,3 +1,9 @@
+// src/content/parser.js
+// Parses SRT, VTT, and ASS/SSA subtitle files into cue objects.
+// Each cue: { start: number, end: number, text: string } (times in ms)
+
+// ── Entry point ───────────────────────────────────────────────────────────────
+
 function parseSubtitles(raw, url = "") {
   console.log("[DualSubs][Parser] parseSubtitles called", {
     url,
@@ -20,7 +26,8 @@ function parseSubtitles(raw, url = "") {
   return parseSRT(trimmed);
 }
 
-// ── SRT ──────────────────────────────────────────────────────────────────────
+// ── SRT ───────────────────────────────────────────────────────────────────────
+
 function parseSRT(raw) {
   console.log("[DualSubs][Parser][SRT] Parsing SRT");
 
@@ -63,7 +70,8 @@ function srtTimeToMs(t) {
   }
 }
 
-// ── VTT ──────────────────────────────────────────────────────────────────────
+// ── VTT ───────────────────────────────────────────────────────────────────────
+
 function parseVTT(raw) {
   console.log("[DualSubs][Parser][VTT] Parsing VTT");
 
@@ -116,7 +124,8 @@ function vttTimeToMs(t) {
   }
 }
 
-// ── ASS / SSA ────────────────────────────────────────────────────────────────
+// ── ASS / SSA ─────────────────────────────────────────────────────────────────
+
 function parseASS(raw) {
   console.log("[DualSubs][Parser][ASS] Parsing ASS/SSA");
 
@@ -194,11 +203,13 @@ function stripASSOverrides(text) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
 function stripTags(text) {
   return text.replace(/<[^>]*>/g, "").trim();
 }
 
 // ── Cue lookup ────────────────────────────────────────────────────────────────
+
 function findCue(cues, timeMs) {
   if (!cues.length) {
     console.log("[DualSubs][Parser] findCue called with empty cues");
@@ -223,3 +234,5 @@ function findCue(cues, timeMs) {
 
   return null;
 }
+
+module.exports = { parseSubtitles, findCue };
