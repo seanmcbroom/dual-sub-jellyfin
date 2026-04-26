@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jellyfin Dual Subtitles</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+
+  <header>
+    <h1>Dual Subtitles</h1>
+    <div id="save-msg" class="save hidden">Saved</div>
+  </header>
+
+  <div id="status-msg" class="status hidden"></div>
+
+  <div id="main-content">
+    <!-- Tracks -->
+    <section>
+      <h2>Subtitle tracks</h2>
+
+      <div class="field">
+        <label for="primary-select">Primary (top)</label>
+        <select id="primary-select">
+          <option value="">— None —</option>
+        </select>
+      </div>
+
+      <div class="field offset-field">
+        <label for="primary-offset">Offset (ms)</label>
+        <div class="offset-controls">
+          <button class="offset-btn" data-track="primary" data-delta="-500">−500</button>
+          <button class="offset-btn" data-track="primary" data-delta="-100">−100</button>
+          <input type="number" id="primary-offset" value="0" step="100" min="-10000" max="10000" inputmode="numeric">
+          <button class="offset-btn" data-track="primary" data-delta="100">+100</button>
+          <button class="offset-btn" data-track="primary" data-delta="500">+500</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="secondary-select">Secondary (bottom)</label>
+        <select id="secondary-select">
+          <option value="">— None —</option>
+        </select>
+      </div>
+
+      <div class="field offset-field">
+        <label for="secondary-offset">Offset (ms)</label>
+        <div class="offset-controls">
+          <button class="offset-btn" data-track="secondary" data-delta="-500">−500</button>
+          <button class="offset-btn" data-track="secondary" data-delta="-100">−100</button>
+          <input type="number" id="secondary-offset" value="0" step="100" min="-10000" max="10000" inputmode="numeric">
+          <button class="offset-btn" data-track="secondary" data-delta="100">+100</button>
+          <button class="offset-btn" data-track="secondary" data-delta="500">+500</button>
+        </div>
+      </div>
+    </section>
+
+    <hr>
+
+    <!-- Appearance -->
+    <section>
+      <h2>Appearance</h2>
+
+      <div class="field row">
+        <label for="primary-size">Primary size</label>
+        <input type="range" id="primary-size" min="12" max="48" value="22">
+        <span id="primary-size-val">22px</span>
+      </div>
+
+      <div class="field row">
+        <label for="primary-color">Primary colour</label>
+        <input type="color" id="primary-color" value="#ffffff">
+      </div>
+
+      <div class="field row">
+        <label for="secondary-size">Secondary size</label>
+        <input type="range" id="secondary-size" min="10" max="36" value="16">
+        <span id="secondary-size-val">16px</span>
+      </div>
+
+      <div class="field row">
+        <label for="secondary-color">Secondary colour</label>
+        <input type="color" id="secondary-color" value="#cccccc">
+      </div>
+
+      <div class="field row">
+        <label for="bg-opacity">Background opacity</label>
+        <input type="range" id="bg-opacity" min="0" max="1" step="0.05" value="0.6">
+        <span id="bg-opacity-val">60%</span>
+      </div>
+
+      <label class="field row">
+        <span>Primary on pause only</span>
+        <input type="checkbox" id="first-on-pause">
+      </label>
+
+      <label class="field row">
+        <span>Secondary on pause only</span>
+        <input type="checkbox" id="secondary-on-pause">
+      </label>
+
+      <label class="field row">
+        <span>Hide native subs</span>
+        <input type="checkbox" id="hide-original" checked>
+      </label>
+    </section>
+
+    <hr>
+
+    <!-- Defaults -->
+    <section>
+      <h2>Default languages</h2>
+      <p class="hint">Auto-selected when opening a video.</p>
+
+      <div class="field">
+        <label for="default-primary-lang">Primary</label>
+        <input type="text" id="default-primary-lang" placeholder="e.g. Japanese">
+      </div>
+
+      <div class="field">
+        <label for="default-secondary-lang">Secondary</label>
+        <input type="text" id="default-secondary-lang" placeholder="e.g. English">
+      </div>
+    </section>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+
+</html>

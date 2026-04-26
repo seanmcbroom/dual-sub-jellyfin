@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "Jellyfin Dual Subtitles",
+  "version": "1.0.0",
+  "description": "Show two subtitle tracks simultaneously on Jellyfin with selectable text for Yomitan/Migaku.",
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "jellyfin-dual-subs@local.dev",
+      "strict_min_version": "109.0"
+    }
+  },
+
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+
+  "background": {
+    "service_worker": "src/background.js",
+    "scripts": ["src/background.js"]
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["src/content.bundle.js"],
+      "css": ["src/overlay.css"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_icon": {
+      "16":  "icons/icon16.png",
+      "48":  "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+
+  "icons": {
+    "16":  "icons/icon16.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
