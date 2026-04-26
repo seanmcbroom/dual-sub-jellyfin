@@ -5,36 +5,24 @@
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 function parseSubtitles(raw, url = "") {
-  console.log("[DualSubs][Parser] parseSubtitles called", {
-    url,
-    length: raw?.length
-  });
-
   const trimmed = raw.trim();
 
   if (url.endsWith(".ass") || url.endsWith(".ssa") || trimmed.startsWith("[Script Info]")) {
-    console.log("[DualSubs][Parser] Detected ASS/SSA format");
     return parseASS(trimmed);
   }
 
   if (trimmed.startsWith("WEBVTT")) {
-    console.log("[DualSubs][Parser] Detected VTT format");
     return parseVTT(trimmed);
   }
 
-  console.log("[DualSubs][Parser] Defaulting to SRT format");
   return parseSRT(trimmed);
 }
 
 // ── SRT ───────────────────────────────────────────────────────────────────────
 
 function parseSRT(raw) {
-  console.log("[DualSubs][Parser][SRT] Parsing SRT");
-
   const cues = [];
   const blocks = raw.split(/\n\s*\n/);
-
-  console.log("[DualSubs][Parser][SRT] Blocks found:", blocks.length);
 
   for (const block of blocks) {
     const lines = block.trim().split("\n");
@@ -55,7 +43,6 @@ function parseSRT(raw) {
     }
   }
 
-  console.log("[DualSubs][Parser][SRT] Parsed cues:", cues.length);
   return cues;
 }
 
@@ -73,12 +60,8 @@ function srtTimeToMs(t) {
 // ── VTT ───────────────────────────────────────────────────────────────────────
 
 function parseVTT(raw) {
-  console.log("[DualSubs][Parser][VTT] Parsing VTT");
-
   const cues = [];
   const blocks = raw.split(/\n\s*\n/);
-
-  console.log("[DualSubs][Parser][VTT] Blocks found:", blocks.length);
 
   for (const block of blocks) {
     const lines = block.trim().split("\n");
@@ -100,7 +83,6 @@ function parseVTT(raw) {
     }
   }
 
-  console.log("[DualSubs][Parser][VTT] Parsed cues:", cues.length);
   return cues;
 }
 
@@ -127,8 +109,6 @@ function vttTimeToMs(t) {
 // ── ASS / SSA ─────────────────────────────────────────────────────────────────
 
 function parseASS(raw) {
-  console.log("[DualSubs][Parser][ASS] Parsing ASS/SSA");
-
   const cues = [];
   let inEvents = false;
   let formatFields = [];
@@ -137,7 +117,6 @@ function parseASS(raw) {
     const trimmed = line.trim();
 
     if (trimmed === "[Events]") {
-      console.log("[DualSubs][Parser][ASS] Entering Events section");
       inEvents = true;
       continue;
     }
@@ -151,7 +130,6 @@ function parseASS(raw) {
 
     if (trimmed.startsWith("Format:")) {
       formatFields = trimmed.slice(7).split(",").map(f => f.trim().toLowerCase());
-      console.log("[DualSubs][Parser][ASS] Format fields:", formatFields);
       continue;
     }
 
@@ -179,7 +157,6 @@ function parseASS(raw) {
 
   cues.sort((a, b) => a.start - b.start);
 
-  console.log("[DualSubs][Parser][ASS] Parsed cues:", cues.length);
   return cues;
 }
 
@@ -212,7 +189,6 @@ function stripTags(text) {
 
 function findCue(cues, timeMs) {
   if (!cues.length) {
-    console.log("[DualSubs][Parser] findCue called with empty cues");
     return null;
   }
 

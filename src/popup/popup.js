@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (message.type === "TRACKS_AVAILABLE") {
       availableTracks = message.tracks;
       populateTrackSelects(availableTracks);
+      applySettingsToUI(); // Re-apply to update track selections if needed
     }
   });
 
@@ -173,8 +174,8 @@ function onTrackChange() {
 
 // ── UI Sync ──────────────────────────────────────
 function applySettingsToUI() {
-  $("primary-select").value = settings.primaryLang || "Auto";
-  $("secondary-select").value = settings.secondaryLang || "Auto";
+  $("primary-select").value = settings.primaryUrl || "";
+  $("secondary-select").value = settings.secondaryUrl || "";
 
   $("primary-offset").value = settings.primaryOffset || 0;
   $("secondary-offset").value = settings.secondaryOffset || 0;
