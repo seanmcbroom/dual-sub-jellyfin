@@ -1,7 +1,14 @@
 # Jellyfin Dual Subtitles
 
 A browser extension that renders two subtitle tracks simultaneously on Jellyfin,
-with selectable text so dictionary extensions like Yomitan and Migaku can scan words.
+with selectable text so dictionary extensions like Yomitan can scan words.
+
+Features:
+Auto-search for selected languages
+Subtitle offset
+Broad subtitle support (VTT, SRT, ASS)
+Customizeable appearance 
+Hide tracks until player is paused
 
 ---
 
