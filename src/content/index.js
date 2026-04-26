@@ -269,14 +269,16 @@ function updatePrimaryVisibility() {
   if (!state.video || !state.primaryLine) return;
 
   const paused = state.video.paused;
-  state.primaryLine.style.opacity = paused || !state.settings.firstOnPause ? "1" : "0";
+  state.primaryLine.style.display =
+    (!state.settings.firstOnPause || paused) ? "block" : "none";
 }
 
 function updateSecondaryVisibility() {
   if (!state.video || !state.secondaryLine) return;
 
   const paused = state.video.paused;
-  state.secondaryLine.style.opacity = paused || !state.settings.secondaryOnPause ? "1" : "0";
+  state.secondaryLine.style.display =
+    (!state.settings.secondaryOnPause || paused) ? "block" : "none";
 }
 
 function applySettingsToOverlay() {
