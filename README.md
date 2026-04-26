@@ -3,12 +3,12 @@
 A browser extension that renders two subtitle tracks simultaneously on Jellyfin,
 with selectable text so dictionary extensions like Yomitan can scan words.
 
-Features:
-Auto-search for selected languages
-Subtitle offset
-Broad subtitle support (VTT, SRT, ASS)
-Customizeable appearance 
-Hide tracks until player is paused
+*Features:*
+- Auto-search for primary & secondary language
+- Broad subtitle support (VTT, SRT, ASS)
+- Subtitle offset
+- Highly customizeable appearance 
+- Hide tracks until player is paused
 
 ---
 
