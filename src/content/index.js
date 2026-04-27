@@ -25,7 +25,6 @@ let lastFetchedTracks = [];
 
 chrome.runtime.onMessage.addListener((message) => {
   if (message.type === "REQUEST_TRACKS") {
-    console.log("[DualSubs] Popup requested tracks");
     chrome.runtime.sendMessage({
       type: "TRACKS_AVAILABLE",
       tracks: lastFetchedTracks || []
@@ -36,22 +35,14 @@ chrome.runtime.onMessage.addListener((message) => {
 init();
 
 function init() {
-  console.log("[DualSubs][Content] Init start");
-
   if (!isJellyfinPage()) {
-    console.log("[DualSubs][Content] Not a Jellyfin page → exiting");
     return;
   }
 
-  console.log("[DualSubs][Content] Jellyfin page detected");
-
   loadSettings().then(settings => {
-    console.log("[DualSubs][Content] Settings loaded:", settings);
-
     state.settings = settings;
 
     if (!settings.enabled) {
-      console.log("[DualSubs][Content] Extension disabled in settings");
       return;
     }
 
@@ -60,22 +51,18 @@ function init() {
   });
 
   chrome.runtime.onMessage.addListener((message) => {
-    console.log("[DualSubs][Content] Message received:", message);
 
     if (message.type === "SETTINGS_UPDATED") {
       state.settings = message.settings;
-      console.log("[DualSubs][Content] Settings updated:", message.settings);
 
       applySettingsToOverlay();
 
       if (!message.settings.enabled) {
-        console.log("[DualSubs][Content] Disabled → teardown");
         teardown();
       }
     }
 
     if (message.type === "LOAD_TRACK") {
-      console.log("[DualSubs][Content] LOAD_TRACK:", message.role, message.url);
       loadTrack(message.role, message.url);
     }
   });
@@ -88,19 +75,15 @@ function isJellyfinPage() {
     document.querySelector('meta[name="application-name"][content="Jellyfin"]') !== null ||
     document.querySelector("#jellyfin-metro-js") !== null ||
     window.__jellyfin !== undefined;
-
-  console.log("[DualSubs][Content] isJellyfinPage:", result);
+  
   return result;
 }
 
 // ── Video detection ───────────────────────────────────────────────────────────
 
 function waitForVideo() {
-  console.log("[DualSubs][Content] Waiting for video element...");
-
   const existing = document.querySelector("video");
   if (existing) {
-    console.log("[DualSubs][Content] Video already exists");
     onVideoFound(existing);
     return;
   }
@@ -108,7 +91,6 @@ function waitForVideo() {
   const observer = new MutationObserver(() => {
     const video = document.querySelector("video");
     if (video) {
-      console.log("[DualSubs][Content] Video detected via observer");
       observer.disconnect();
       onVideoFound(video);
     }
@@ -122,17 +104,13 @@ function observeNavigation() {
 
   function handleNavigation() {
     if (location.href === lastHref) return;
-    console.log("[DualSubs][Content] Navigation detected:", location.href);
     lastHref = location.href;
     teardown();
     waitForVideo();
   }
 
-  // History API navigation (pushState / replaceState) — Jellyfin's primary nav
   window.addEventListener("popstate", handleNavigation);
 
-  // Jellyfin updates <title> on every route change — catches pushState navigations
-  // that don't fire popstate (e.g. router.push)
   const titleEl = document.querySelector("title");
   if (titleEl) {
     new MutationObserver(handleNavigation).observe(titleEl, { childList: true });
@@ -140,13 +118,10 @@ function observeNavigation() {
 }
 
 async function onVideoFound(video) {
-  console.log("[DualSubs][Content] onVideoFound");
-
   state.video = video;
   lastFetchedTracks = [];
 
   detectJellyfinCredentials();
-  console.log("[DualSubs][Content] Jellyfin credentials checked");
 
   createOverlay();
 
@@ -159,23 +134,18 @@ async function onVideoFound(video) {
   updateVisibilities();
 
   if (state.settings.hideOriginal) {
-    console.log("[DualSubs][Content] Hiding native subtitles");
     suppressNativeSubtitles();
   }
 
   const tracks = await fetchSubtitleTracks();
   lastFetchedTracks = tracks;
-  console.log("[DualSubs][Content] Tracks found:", tracks);
   chrome.runtime.sendMessage({ type: "TRACKS_AVAILABLE", tracks });
-  console.log("[DualSubs] track URLs:", tracks.map(t => t.url));
 
   let primaryTrack = tracks.find(t => t.label === state.settings.primaryLang);
-  console.log("[DualSubs][Content] load primary by lang:", primaryTrack);
   if (primaryTrack) {
     await loadTrack("primary", primaryTrack.url);
   } else {
     primaryTrack = tracks.find(t => t.label.toLowerCase().includes(state.settings.defaultPrimaryLang.toLowerCase()));
-    console.log("[DualSubs][Content] Auto-load primary:", primaryTrack);
     if (primaryTrack) {
       await loadTrack("primary", primaryTrack.url);
       state.settings.primaryLang = primaryTrack.label;
@@ -183,12 +153,10 @@ async function onVideoFound(video) {
   }
 
   let secondaryTrack = tracks.find(t => t.label === state.settings.secondaryLang);
-  console.log("[DualSubs][Content] load secondary by lang:", secondaryTrack);
   if (secondaryTrack) {
     await loadTrack("secondary", secondaryTrack.url);
   } else {
     secondaryTrack = tracks.find(t => t.label.toLowerCase().includes(state.settings.defaultSecondaryLang.toLowerCase()));
-    console.log("[DualSubs][Content] Auto-load secondary:", secondaryTrack);
     if (secondaryTrack) {
       await loadTrack("secondary", secondaryTrack.url);
       state.settings.secondaryLang = secondaryTrack.label;
@@ -199,8 +167,6 @@ async function onVideoFound(video) {
 }
 
 function teardown() {
-  console.log("[DualSubs][Content] Teardown");
-
   if (state.animFrameId) cancelAnimationFrame(state.animFrameId);
   if (state.overlay) state.overlay.remove();
 
@@ -219,10 +185,7 @@ function teardown() {
 // ── Overlay ───────────────────────────────────────────────────────────────────
 
 function createOverlay() {
-  console.log("[DualSubs] createOverlay");
-
   if (!state.video) {
-    console.warn("[DualSubs] createOverlay: no video in state");
     return;
   }
 
@@ -261,8 +224,6 @@ function createOverlay() {
   state.secondaryLine = secondary;
 
   applySettingsToOverlay();
-
-  console.log("[DualSubs] Overlay created successfully");
 }
 
 function updatePrimaryVisibility() {
@@ -290,10 +251,7 @@ function updateSecondaryVisibility() {
 }
 
 function applySettingsToOverlay() {
-  console.log("[DualSubs] applySettingsToOverlay");
-
   if (!state.primaryLine || !state.secondaryLine) {
-    console.warn("[DualSubs] Overlay lines not ready");
     return;
   }
 
@@ -308,8 +266,6 @@ function applySettingsToOverlay() {
   if (state.overlay) {
     state.overlay.style.setProperty("--sub-bg-opacity", s.bgOpacity ?? 0.6);
   }
-
-  console.log("[DualSubs] Overlay styles applied");
 }
 
 function suppressNativeSubtitles() {
@@ -330,7 +286,6 @@ function suppressNativeSubtitles() {
     }
   `;
   document.head.appendChild(style);
-  console.log("[DualSubs] Native subtitles suppressed");
 }
 
 // ── Jellyfin API ──────────────────────────────────────────────────────────────
@@ -348,7 +303,6 @@ function detectJellyfinCredentials() {
     const server = creds?.Servers?.[0];
 
     if (!server) {
-      console.warn("[DualSubs][Content] No server info in credentials");
       return;
     }
 
@@ -361,11 +315,6 @@ function detectJellyfinCredentials() {
 
     state.jellyfinToken = server.AccessToken;
     state.jellyfinUserId = server.UserId || "";
-
-    console.log("[DualSubs][Content] Jellyfin creds:", {
-      base: state.jellyfinApiBase,
-      hasToken: !!state.jellyfinToken
-    });
 
   } catch (e) {
     console.warn("[DualSubs][Content] Credential parse error:", e);
@@ -380,11 +329,9 @@ function getItemIdFromFavoriteButton() {
   const id = btn?.dataset?.id;
 
   if (!id) {
-    console.warn("[DualSubs] No itemId found in favorite button");
     return null;
   }
 
-  console.log("[DualSubs] ItemId from favorite button:", id);
   return id;
 }
 
@@ -393,21 +340,15 @@ function getJellyfinAuthHeader() {
 }
 
 async function fetchSubtitleTracks() {
-  console.log("[DualSubs][Content] Fetching subtitle tracks");
-
   const itemId = getItemIdFromFavoriteButton();
 
   if (!itemId) {
-    console.warn("[DualSubs][Content] No item ID found");
     return [];
   }
 
   if (!state.jellyfinApiBase || !state.jellyfinToken) {
-    console.warn("[DualSubs][Content] Missing API base or token");
     return [];
   }
-
-  console.log("[DualSubs][Content] Item ID:", itemId);
 
   try {
     const res = await fetch(
@@ -422,15 +363,12 @@ async function fetchSubtitleTracks() {
       body: JSON.stringify({})
     });
 
-    console.log("[DualSubs][Content] PlaybackInfo status:", res.status);
-
     if (!res.ok) return [];
 
     const data = await res.json();
     const mediaSource = data?.MediaSources?.[0];
 
     if (!mediaSource) {
-      console.warn("[DualSubs][Content] No media source");
       return [];
     }
 
@@ -443,11 +381,8 @@ async function fetchSubtitleTracks() {
           `${state.jellyfinApiBase}/Videos/${itemId}/${mediaSource.Id}/Subtitles/${s.Index}/Stream.${(s.Codec || "srt").toLowerCase()}`
       }));
 
-    console.log("[DualSubs][Content] Parsed tracks:", tracks.length);
     return tracks;
-
   } catch (e) {
-    console.warn("[DualSubs][Content] Track fetch error:", e);
     return [];
   }
 }
@@ -455,24 +390,17 @@ async function fetchSubtitleTracks() {
 // ── Track loading ─────────────────────────────────────────────────────────────
 
 async function loadTrack(role, url) {
-  console.log("[DualSubs][Content] loadTrack:", role, url);
-
   const response = await chrome.runtime.sendMessage({
     type: "FETCH_SUBTITLE",
     url,
     token: state.jellyfinToken
   });
 
-  console.log("[DualSubs][Content] Fetch response:", response);
-
   if (!response?.ok) {
-    console.warn("[DualSubs][Content] Fetch failed:", response?.error);
-    console.warn("[DualSubs][Content] URL was:", url);
     return;
   }
 
   const cues = parseSubtitles(response.text, url);
-  console.log("[DualSubs][Content] Parsed cues:", cues.length);
 
   if (role === "primary") state.primaryCues = cues;
   else state.secondaryCues = cues;
@@ -481,8 +409,6 @@ async function loadTrack(role, url) {
 // ── Render loop ───────────────────────────────────────────────────────────────
 
 function startRenderLoop() {
-  console.log("[DualSubs][Content] Starting render loop");
-
   let lastTime = -1;
 
   function tick() {
@@ -506,9 +432,6 @@ function updateLine(lineEl, cues, timeMs) {
   if (!lineEl) return;
 
   if (!cues.length) {
-    if (Math.random() < 0.01) {
-      console.log("[DualSubs][Content] No cues yet");
-    }
     return;
   }
 
@@ -516,8 +439,6 @@ function updateLine(lineEl, cues, timeMs) {
   const newText = cue ? cue.text : "";
 
   if (lineEl.dataset.current === newText) return;
-
-  console.log("[DualSubs][Content] Updating subtitle:", newText);
 
   lineEl.dataset.current = newText;
   lineEl.innerHTML = "";
@@ -536,11 +457,8 @@ function updateLine(lineEl, cues, timeMs) {
 // ── Settings ──────────────────────────────────────────────────────────────────
 
 function loadSettings() {
-  console.log("[DualSubs][Content] Requesting settings");
-
   return new Promise(resolve => {
     chrome.runtime.sendMessage({ type: "GET_SETTINGS" }, (res) => {
-      console.log("[DualSubs][Content] Settings response:", res);
       resolve(res);
     });
   });
