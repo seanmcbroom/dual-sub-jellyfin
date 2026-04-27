@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Language Learning w/ Jellyfin",
-  "version": "1.0.5",
+  "name": "Learn Language w/ Jellyfin",
+  "version": "1.0.6",
   "description": "Show two subtitle tracks simultaneously on Jellyfin with selectable text for Yomitan/Migaku.",
 
   "permissions": [
