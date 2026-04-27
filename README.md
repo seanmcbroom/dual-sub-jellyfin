@@ -19,7 +19,7 @@ with selectable text so dictionary extensions like Yomitan can scan words.
 
 ## Preview
 
-<img width="1280" height="800" alt="367834" src="https://github.com/user-attachments/assets/23c36b3f-95d2-4dc7-af21-67192cec24a4" />
+<img width="1280" height="800" alt="367834" src="https://github.com/user-attachments/assets/5774dddc-6ca6-4e55-bfb4-016e10a8afc3" />
 
 ## Project structure
 
