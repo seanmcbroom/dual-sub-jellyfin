@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Jellyfin Dual Subtitles",
+  "name": "Language Learning w/ Jellyfin",
   "version": "1.0.0",
   "description": "Show two subtitle tracks simultaneously on Jellyfin with selectable text for Yomitan/Migaku.",
 
