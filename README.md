@@ -1,12 +1,16 @@
 
+
 <p align="center">
   <img src="https://github.com/seanmcbroom/dual-sub-jellyfin/blob/main/icons/icon128.png?raw=true" width="128" /><br>
 
-  <a href="https://addons.mozilla.org/en-US/firefox/addon/language-learning-w-jellyfin/">
-    <img src="https://img.shields.io/badge/Firefox-Add--on-orange?logo=firefox-browser&logoColor=white">
+  <a title="Firefox Add-ons" href="https://addons.mozilla.org/en-US/firefox/addon/language-learning-w-jellyfin/">
+    <img src="https://img.shields.io/badge/Firefox%20-%23FF7139.svg?logo=firefox%20browser&logoColor=white">
   </a>
-  <img src="https://img.shields.io/badge/Chrome-Coming%20Soon-lightgrey?logo=googlechrome"><br>
-
+  <img src="https://img.shields.io/badge/Chrome%20-Coming%20Soon-lightgrey?logo=google%20chrome&logoColor=white">
+  <a title="Microsoft Edge Add-Ons" href="#">
+    <img src="https://img.shields.io/badge/Edge%20-Coming%20Soon-lightgrey?logo=microsoft%20edge&logoColor=white">
+  </a><br>
+  
   <img src="https://img.shields.io/github/license/seanmcbroom/dual-sub-jellyfin">
   <img src="https://img.shields.io/github/stars/seanmcbroom/dual-sub-jellyfin?style=social">
 </p>
