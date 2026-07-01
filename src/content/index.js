@@ -16,7 +16,11 @@ let state = {
   settings: null,
   animFrameId: null,
   jellyfinApiBase: null,
-  jellyfinToken: null
+  jellyfinToken: null,
+  lastPausedPrimaryCue: null,
+  lastPausedSecondaryCue: null,
+  isPrimaryHovered: false,
+  isSecondaryHovered: false
 };
 
 let lastFetchedTracks = [];
@@ -178,7 +182,11 @@ function teardown() {
     secondaryLine: null,
     primaryCues: [],
     secondaryCues: [],
-    animFrameId: null
+    animFrameId: null,
+    lastPausedPrimaryCue: null,
+    lastPausedSecondaryCue: null,
+    isPrimaryHovered: false,
+    isSecondaryHovered: false
   };
 }
 
@@ -213,6 +221,12 @@ function createOverlay() {
   const secondary = document.createElement("div");
   secondary.className = "jf-sub-line jf-sub-secondary";
   secondary.style.pointerEvents = "auto";
+
+  // Performance-friendly event-driven hover state tracking
+  primary.addEventListener("mouseenter", () => { state.isPrimaryHovered = true; });
+  primary.addEventListener("mouseleave", () => { state.isPrimaryHovered = false; });
+  secondary.addEventListener("mouseenter", () => { state.isSecondaryHovered = true; });
+  secondary.addEventListener("mouseleave", () => { state.isSecondaryHovered = false; });
 
   overlay.appendChild(primary);
   overlay.appendChild(secondary);
@@ -408,6 +422,48 @@ async function loadTrack(role, url) {
 
 // ── Render loop ───────────────────────────────────────────────────────────────
 
+function isHoveringSubtitle() {
+  return !!(state.isPrimaryHovered || state.isSecondaryHovered);
+}
+
+function checkPauseOnHover(timeMs) {
+  const primaryCue = findCue(state.primaryCues, timeMs);
+  const secondaryCue = findCue(state.secondaryCues, timeMs);
+
+  if (state.lastPausedPrimaryCue !== primaryCue) {
+    state.lastPausedPrimaryCue = null;
+  }
+  if (state.lastPausedSecondaryCue !== secondaryCue) {
+    state.lastPausedSecondaryCue = null;
+  }
+
+  if (
+    !state.settings ||
+    !state.settings.pauseOnHover ||
+    !state.video ||
+    state.video.paused ||
+    !isHoveringSubtitle()
+  ) {
+    return;
+  }
+
+  if (primaryCue && primaryCue !== state.lastPausedPrimaryCue) {
+    const duration = primaryCue.end - primaryCue.start;
+    const threshold = Math.min(150, duration / 2);
+    if (timeMs >= primaryCue.end - threshold) {
+      state.video.pause();
+      state.lastPausedPrimaryCue = primaryCue;
+    }
+  } else if (secondaryCue && secondaryCue !== state.lastPausedSecondaryCue) {
+    const duration = secondaryCue.end - secondaryCue.start;
+    const threshold = Math.min(150, duration / 2);
+    if (timeMs >= secondaryCue.end - threshold) {
+      state.video.pause();
+      state.lastPausedSecondaryCue = secondaryCue;
+    }
+  }
+}
+
 function startRenderLoop() {
   let lastTime = -1;
 
@@ -420,6 +476,8 @@ function startRenderLoop() {
 
     if (Math.abs(timeMs - lastTime) < 50) return;
     lastTime = timeMs;
+
+    checkPauseOnHover(timeMs);
 
     updateLine(state.primaryLine, state.primaryCues, timeMs);
     updateLine(state.secondaryLine, state.secondaryCues, timeMs);
