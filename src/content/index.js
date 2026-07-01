@@ -56,6 +56,7 @@ function init() {
       state.settings = message.settings;
 
       applySettingsToOverlay();
+      updateNativeSubtitlesSuppression();
 
       if (!message.settings.enabled) {
         teardown();
@@ -75,7 +76,7 @@ function isJellyfinPage() {
     document.querySelector('meta[name="application-name"][content="Jellyfin"]') !== null ||
     document.querySelector("#jellyfin-metro-js") !== null ||
     window.__jellyfin !== undefined;
-  
+
   return result;
 }
 
@@ -133,9 +134,7 @@ async function onVideoFound(video) {
   state.video.addEventListener("pause", updateVisibilities);
   updateVisibilities();
 
-  if (state.settings.hideOriginal) {
-    suppressNativeSubtitles();
-  }
+  updateNativeSubtitlesSuppression();
 
   const tracks = await fetchSubtitleTracks();
   lastFetchedTracks = tracks;
@@ -169,6 +168,9 @@ async function onVideoFound(video) {
 function teardown() {
   if (state.animFrameId) cancelAnimationFrame(state.animFrameId);
   if (state.overlay) state.overlay.remove();
+
+  const existing = document.getElementById("jf-hide-native-subs-style");
+  if (existing) existing.remove();
 
   state = {
     ...state,
@@ -268,24 +270,35 @@ function applySettingsToOverlay() {
   }
 }
 
-function suppressNativeSubtitles() {
-  const style = document.createElement("style");
-  style.textContent = `
-    .videoSubtitles,
-    .videoSubtitlesInner,
-    .subtitles-container,
-    .htmlvideoplayer-subtitles,
-    .subtitleContainer,
-    video::cue {
-      display: none !important;
-      opacity: 0 !important;
-      visibility: hidden !important;
+function updateNativeSubtitlesSuppression() {
+  const existing = document.getElementById("jf-hide-native-subs-style");
+
+  if (state.settings && state.settings.hideOriginal && state.settings.enabled) {
+    if (!existing) {
+      const style = document.createElement("style");
+      style.id = "jf-hide-native-subs-style";
+      style.textContent = `
+        .videoSubtitles,
+        .videoSubtitlesInner,
+        .subtitles-container,
+        .htmlvideoplayer-subtitles,
+        .subtitleContainer,
+        video::cue {
+          display: none !important;
+          opacity: 0 !important;
+          visibility: hidden !important;
+        }
+        .btnSubtitles {
+          display: none !important;
+        }
+      `;
+      document.head.appendChild(style);
     }
-    .btnSubtitles {
-      display: none !important;
+  } else {
+    if (existing) {
+      existing.remove();
     }
-  `;
-  document.head.appendChild(style);
+  }
 }
 
 // ── Jellyfin API ──────────────────────────────────────────────────────────────
