@@ -307,8 +307,8 @@ function detectJellyfinCredentials() {
     }
 
     state.jellyfinApiBase = (
-      server.LocalAddress ||
       server.ManualAddress ||
+      server.LocalAddress ||
       server.RemoteAddress ||
       ""
     ).replace(/\/$/, "");
