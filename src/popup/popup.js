@@ -97,6 +97,10 @@ function wireControls() {
     updateSetting("hideOriginal", e.target.checked)
   );
 
+  $("pause-on-hover").addEventListener("change", e =>
+    updateSetting("pauseOnHover", e.target.checked)
+  );
+
   $("first-on-pause").addEventListener("change", e =>
     updateSetting("firstOnPause", e.target.checked)
   );
@@ -189,6 +193,7 @@ function applySettingsToUI() {
   $("bg-opacity").value = settings.bgOpacity ?? 0.6;
 
   $("hide-original").checked = settings.hideOriginal !== false;
+  $("pause-on-hover").checked = settings.pauseOnHover !== false;
   $("first-on-pause").checked = !!settings.firstOnPause;
   $("secondary-on-pause").checked = !!settings.secondaryOnPause;
 

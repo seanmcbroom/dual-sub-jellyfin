@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS = {
   hideOriginal:         true,
   firstOnPause:         false,
   secondaryOnPause:     true,
+  pauseOnHover:         true,
 };
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
