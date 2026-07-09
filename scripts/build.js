@@ -21,11 +21,20 @@ async function buildForBrowser(target) {
   fs.mkdirSync(path.join(outDir, "src"), { recursive: true });
   fs.mkdirSync(path.join(outDir, "icons"), { recursive: true });
 
-  // Bundle content script (parser + content)
+  // Bundle content script (parser + content + shared panel)
   await esbuild.build({
     entryPoints: [path.join(SRC, "content", "index.js")],
     bundle: true,
     outfile: path.join(outDir, "src", "content.bundle.js"),
+    format: "iife",
+    target: "es2020",
+  });
+
+  // Bundle popup script (shared panel template/controller)
+  await esbuild.build({
+    entryPoints: [path.join(SRC, "popup", "popup.js")],
+    bundle: true,
+    outfile: path.join(outDir, "src", "popup.bundle.js"),
     format: "iife",
     target: "es2020",
   });
@@ -36,15 +45,20 @@ async function buildForBrowser(target) {
     path.join(outDir, "src", "background.js")
   );
 
-  // Copy popup files
-  for (const f of ["popup.html", "popup.js", "popup.css"]) {
+  // Copy popup shell (HTML + popup-specific chrome CSS; logic is bundled above)
+  for (const f of ["popup.html", "popup.css"]) {
     fs.copyFileSync(path.join(SRC, "popup", f), path.join(outDir, "src", f));
   }
 
-  // Copy overlay CSS
+  // Copy overlay CSS (subtitle lines) and shared panel CSS (settings UI,
+  // used by both the popup and the in-player panel)
   fs.copyFileSync(
     path.join(SRC, "content", "overlay.css"),
     path.join(outDir, "src", "overlay.css")
+  );
+  fs.copyFileSync(
+    path.join(SRC, "shared", "panel.css"),
+    path.join(outDir, "src", "panel.css")
   );
 
   // Copy icons

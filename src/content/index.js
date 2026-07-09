@@ -3,6 +3,10 @@
 // creates the subtitle overlay, and drives the render loop.
 
 const { parseSubtitles, findCue } = require("./parser");
+const panelTemplate = require("../shared/panel-template");
+const { panelHeaderTemplate } = panelTemplate;
+const mountPanel = require("../shared/panel-controller");
+const ICONS = require("../shared/icons");
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -20,7 +24,11 @@ let state = {
   lastPausedPrimaryCue: null,
   lastPausedSecondaryCue: null,
   isPrimaryHovered: false,
-  isSecondaryHovered: false
+  isSecondaryHovered: false,
+  toggleBtn: null,
+  panelEl: null,
+  panelController: null,
+  controlBarObserver: null
 };
 
 let lastFetchedTracks = [];
@@ -46,24 +54,31 @@ function init() {
   loadSettings().then(settings => {
     state.settings = settings;
 
-    if (!settings.enabled) {
-      return;
-    }
-
-    waitForVideo();
     observeNavigation();
+    observeControlBar();
+
+    if (settings.enabled) {
+      waitForVideo();
+    }
   });
 
   chrome.runtime.onMessage.addListener((message) => {
 
     if (message.type === "SETTINGS_UPDATED") {
+      const wasEnabled = state.settings?.enabled;
       state.settings = message.settings;
 
       applySettingsToOverlay();
       updateNativeSubtitlesSuppression();
+      updatePrimaryVisibility();
+      updateSecondaryVisibility();
 
-      if (!message.settings.enabled) {
-        teardown();
+      if (wasEnabled !== message.settings.enabled) {
+        handleEnabledChange(message.settings.enabled);
+      }
+
+      if (state.panelController) {
+        state.panelController.setSettings(state.settings);
       }
     }
 
@@ -71,6 +86,17 @@ function init() {
       loadTrack(message.role, message.url);
     }
   });
+}
+
+// Turns subtitle rendering on/off at runtime without a full page reload.
+// The in-player button and panel stay mounted either way, so the person
+// always has a way to flip it back on from the player.
+function handleEnabledChange(enabled) {
+  if (enabled) {
+    if (!state.video) waitForVideo();
+  } else {
+    teardown();
+  }
 }
 
 // ── Jellyfin detection ────────────────────────────────────────────────────────
@@ -111,7 +137,9 @@ function observeNavigation() {
     if (location.href === lastHref) return;
     lastHref = location.href;
     teardown();
-    waitForVideo();
+    removeToggleButton();
+    hidePanel();
+    if (state.settings?.enabled) waitForVideo();
   }
 
   window.addEventListener("popstate", handleNavigation);
@@ -140,9 +168,12 @@ async function onVideoFound(video) {
 
   updateNativeSubtitlesSuppression();
 
+  injectToggleButton();
+
   const tracks = await fetchSubtitleTracks();
   lastFetchedTracks = tracks;
   chrome.runtime.sendMessage({ type: "TRACKS_AVAILABLE", tracks });
+  if (state.panelController) state.panelController.setTracks(tracks);
 
   let primaryTrack = tracks.find(t => t.label === state.settings.primaryLang);
   if (primaryTrack) {
@@ -165,6 +196,8 @@ async function onVideoFound(video) {
       state.settings.secondaryLang = secondaryTrack.label;
     }
   }
+
+  if (state.panelController) state.panelController.setSettings(state.settings);
 
   startRenderLoop();
 }
@@ -312,6 +345,199 @@ function updateNativeSubtitlesSuppression() {
     if (existing) {
       existing.remove();
     }
+  }
+}
+
+// ── In-player button + panel ─────────────────────────────────────────────────
+// Mounts a button next to Jellyfin's own CC ("Subtitles") button that opens
+// the same settings panel as the toolbar popup, docked above the player
+// controls instead of hanging off the browser toolbar.
+
+function observeControlBar() {
+  if (state.controlBarObserver) return;
+
+  const observer = new MutationObserver(() => {
+    if (!document.getElementById("jf-dual-subs-toggle-btn")) {
+      injectToggleButton();
+    }
+    if (state.panelEl && !document.body.contains(state.panelEl)) {
+      state.panelEl = null;
+      state.panelController = null;
+    }
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+  state.controlBarObserver = observer;
+}
+
+function findCcButton() {
+  return (
+    document.querySelector(".btnSubtitles") ||
+    document.querySelector('button[title="Subtitles"]') ||
+    document.querySelector('button[data-id="btnSubtitles"]')
+  );
+}
+
+function injectToggleButton() {
+  if (document.getElementById("jf-dual-subs-toggle-btn")) return;
+
+  const ccBtn = findCcButton();
+  if (!ccBtn) return;
+
+  // Clone Jellyfin's button so we inherit its styling.
+  const btn = ccBtn.cloneNode(true);
+  btn.id = "jf-dual-subs-toggle-btn";
+  btn.classList.add("jf-dual-subs-btn");
+  btn.classList.remove("btnSubtitles");
+  btn.removeAttribute("data-id");
+  btn.setAttribute("title", "Dual Subtitles");
+  btn.setAttribute("aria-label", "Dual Subtitles");
+
+  const iconHolder = btn.querySelector(".xlargePaperIconButton");
+
+  if (iconHolder) {
+    iconHolder.className = "xlargePaperIconButton";
+
+    iconHolder.innerHTML = `
+      <span class="jf-dual-subs-icon">
+        ${ICONS.dualSubs}
+      </span>
+    `;
+  }
+
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    togglePanel(btn);
+  });
+
+  ccBtn.insertAdjacentElement("afterend", btn);
+  state.toggleBtn = btn;
+}
+
+function removeToggleButton() {
+  const btn = document.getElementById("jf-dual-subs-toggle-btn");
+  if (btn) btn.remove();
+  state.toggleBtn = null;
+}
+
+function buildContentHost() {
+  return {
+    updateSetting(key, value, { broadcast = true, silent = false } = {}) {
+      if (!state.settings || state.settings[key] === value) return;
+
+      state.settings[key] = value;
+
+      chrome.runtime.sendMessage({ type: "SAVE_SETTINGS", settings: state.settings });
+
+      applySettingsToOverlay();
+      updateNativeSubtitlesSuppression();
+      updatePrimaryVisibility();
+      updateSecondaryVisibility();
+
+      if (key === "enabled") handleEnabledChange(value);
+
+      if (broadcast) {
+        chrome.runtime.sendMessage({ type: "SETTINGS_UPDATED", settings: state.settings });
+      }
+      if (!silent && state.panelController) state.panelController.flashSaved();
+    },
+
+    onTrackSelect(role, url) {
+      loadTrack(role, url);
+      chrome.runtime.sendMessage({ type: "SETTINGS_UPDATED", settings: state.settings });
+    },
+
+    requestTracks() {
+      if (state.panelController) state.panelController.setTracks(lastFetchedTracks);
+    },
+
+    onClose() {
+      hidePanel();
+    }
+  };
+}
+
+function createPanel() {
+  const panel = document.createElement("div");
+  panel.id = "jf-dual-subs-panel";
+  panel.className = "jf-panel-scope jf-floating-panel jf-panel-scroll";
+
+  const header = document.createElement("div");
+  header.className = "jf-floating-panel-header";
+  header.innerHTML = panelHeaderTemplate({ closable: true });
+
+  const body = document.createElement("div");
+  body.innerHTML = panelTemplate();
+
+  panel.appendChild(header);
+  panel.appendChild(body);
+  document.body.appendChild(panel);
+
+  const controller = mountPanel(panel, buildContentHost());
+  controller.setSettings(state.settings || {});
+  controller.setTracks(lastFetchedTracks);
+
+  state.panelEl = panel;
+  state.panelController = controller;
+
+  document.addEventListener("mousedown", handleOutsideClick, true);
+  window.addEventListener("resize", positionPanel);
+
+  return panel;
+}
+
+function handleOutsideClick(e) {
+  if (!state.panelEl) return;
+
+  if (
+    state.panelEl.contains(e.target) ||
+    state.toggleBtn?.contains(e.target)
+  ) {
+    return;
+  }
+
+  hidePanel();
+}
+
+function positionPanel() {
+  if (!state.panelEl || !state.toggleBtn) return;
+
+  const btnRect = state.toggleBtn.getBoundingClientRect();
+  const panelRect = state.panelEl.getBoundingClientRect();
+  const margin = 10;
+
+  let left = btnRect.right - panelRect.width;
+  left = Math.max(margin, Math.min(left, window.innerWidth - panelRect.width - margin));
+
+  let top = btnRect.top - panelRect.height - margin;
+  if (top < margin) {
+    // Not enough room above the button (e.g. small window) — drop it below instead.
+    top = Math.min(btnRect.bottom + margin, window.innerHeight - panelRect.height - margin);
+  }
+
+  state.panelEl.style.left = `${left}px`;
+  state.panelEl.style.top = `${top}px`;
+}
+
+function showPanel() {
+  if (!state.panelEl) createPanel();
+  state.panelEl.classList.remove("jf-hidden");
+  state.toggleBtn?.classList.add("jf-btn-active");
+  positionPanel();
+}
+
+function hidePanel() {
+  if (!state.panelEl) return;
+  state.panelEl.classList.add("jf-hidden");
+  state.toggleBtn?.classList.remove("jf-btn-active");
+}
+
+function togglePanel() {
+  if (state.panelEl && !state.panelEl.classList.contains("jf-hidden")) {
+    hidePanel();
+  } else {
+    showPanel();
   }
 }
 
