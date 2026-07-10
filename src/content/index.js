@@ -63,9 +63,11 @@ function init() {
   });
 
   chrome.runtime.onMessage.addListener((message) => {
-
     if (message.type === "SETTINGS_UPDATED") {
       const wasEnabled = state.settings?.enabled;
+      const prevPrimaryOffset = state.settings?.primaryOffset;
+      const prevSecondaryOffset = state.settings?.secondaryOffset;
+
       state.settings = message.settings;
 
       applySettingsToOverlay();
@@ -76,14 +78,16 @@ function init() {
       if (wasEnabled !== message.settings.enabled) {
         handleEnabledChange(message.settings.enabled);
       }
+      if (prevPrimaryOffset !== message.settings.primaryOffset) {
+        reapplyOffset("primary");
+      }
+      if (prevSecondaryOffset !== message.settings.secondaryOffset) {
+        reapplyOffset("secondary");
+      }
 
       if (state.panelController) {
         state.panelController.setSettings(state.settings);
       }
-    }
-
-    if (message.type === "LOAD_TRACK") {
-      loadTrack(message.role, message.url);
     }
   });
 }
@@ -436,6 +440,8 @@ function buildContentHost() {
       updateSecondaryVisibility();
 
       if (key === "enabled") handleEnabledChange(value);
+      if (key === "primaryOffset") reapplyOffset("primary");
+      if (key === "secondaryOffset") reapplyOffset("secondary");
 
       if (broadcast) {
         chrome.runtime.sendMessage({ type: "SETTINGS_UPDATED", settings: state.settings });
@@ -642,6 +648,15 @@ async function fetchSubtitleTracks() {
 
 // ── Track loading ─────────────────────────────────────────────────────────────
 
+function applyOffset(cues, offsetMs) {
+  if (!offsetMs) return cues;
+  return cues.map(cue => ({
+    ...cue,
+    start: cue.start + offsetMs,
+    end: cue.end + offsetMs
+  }));
+}
+
 async function loadTrack(role, url) {
   const response = await chrome.runtime.sendMessage({
     type: "FETCH_SUBTITLE",
@@ -653,10 +668,26 @@ async function loadTrack(role, url) {
     return;
   }
 
-  const cues = parseSubtitles(response.text, url);
+  const rawCues = parseSubtitles(response.text, url);
+  const offsetMs = (role === "primary" ? state.settings?.primaryOffset : state.settings?.secondaryOffset) || 0;
 
-  if (role === "primary") state.primaryCues = cues;
-  else state.secondaryCues = cues;
+  if (role === "primary") {
+    state.primaryCuesRaw = rawCues;
+    state.primaryCues = applyOffset(rawCues, offsetMs);
+  } else {
+    state.secondaryCuesRaw = rawCues;
+    state.secondaryCues = applyOffset(rawCues, offsetMs);
+  }
+}
+
+// Re-derives offset cues from the raw parse without re-fetching. Call
+// whenever settings.primaryOffset / settings.secondaryOffset changes.
+function reapplyOffset(role) {
+  if (role === "primary" && state.primaryCuesRaw) {
+    state.primaryCues = applyOffset(state.primaryCuesRaw, state.settings?.primaryOffset || 0);
+  } else if (role === "secondary" && state.secondaryCuesRaw) {
+    state.secondaryCues = applyOffset(state.secondaryCuesRaw, state.settings?.secondaryOffset || 0);
+  }
 }
 
 // ── Render loop ───────────────────────────────────────────────────────────────
