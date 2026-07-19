@@ -3,32 +3,40 @@
 // in content scripts) and keeps a small in-memory cache.
 
 const subtitleCache = new Map();
+const ichiCache = new Map();
 
 const DEFAULT_SETTINGS = {
-  enabled:              true,
-  primaryLang:          "",
-  secondaryLang:        "",
-  defaultPrimaryLang:   "",
+  enabled: true,
+  primaryLang: "",
+  secondaryLang: "",
+  defaultPrimaryLang: "",
   defaultSecondaryLang: "",
-  primaryOffset:        0,
-  secondaryOffset:      0,
-  primarySize:          22,
-  secondarySize:        16,
-  primaryColor:         "#ffffff",
-  secondaryColor:       "#cccccc",
-  bgOpacity:            0.6,
-  hideOriginal:         true,
-  firstOnPause:         false,
-  secondaryOnPause:     true,
-  pauseOnHover:         true,
+  primaryOffset: 0,
+  secondaryOffset: 0,
+  primarySize: 22,
+  secondarySize: 16,
+  primaryColor: "#ffffff",
+  secondaryColor: "#cccccc",
+  bgOpacity: 0.6,
+  hideOriginal: true,
+  firstOnPause: false,
+  secondaryOnPause: true,
+  pauseOnHover: true,
 };
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "FETCH_SUBTITLE") {
     fetchSubtitle(message.url, message.token)
-      .then(text  => sendResponse({ ok: true, text }))
-      .catch(err  => sendResponse({ ok: false, error: err.message }));
+      .then(text => sendResponse({ ok: true, text }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
     return true; // keep channel open for async response
+  }
+
+  if (message.type === "FETCH_ICHI") {
+    fetchIchi(message.text)
+      .then(html => sendResponse({ ok: true, html }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true;
   }
 
   if (message.type === "GET_SETTINGS") {
@@ -66,4 +74,24 @@ async function fetchSubtitle(url, token) {
   }
 
   return text;
+}
+
+async function fetchIchi(text) {
+  if (ichiCache.has(text)) return ichiCache.get(text);
+
+  const encodedQuery = encodeURIComponent(text);
+  const targetUrl = `https://ichi.moe/cl/qr/?q=${encodedQuery}&r=htr`;
+
+  const response = await fetch(targetUrl);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+  const html = await response.text();
+  
+  ichiCache.set(text, html);
+  
+  if (ichiCache.size > 200) {
+    ichiCache.delete(ichiCache.keys().next().value);
+  }
+  
+  return html;
 }

@@ -7,6 +7,8 @@ const panelTemplate = require("../shared/panel-template");
 const { panelHeaderTemplate } = panelTemplate;
 const mountPanel = require("../shared/panel-controller");
 const ICONS = require("../shared/icons");
+const { parseIchiHtml } = require("./ichi-parser");
+const { showTooltip, hideTooltip } = require("./ichi-tooltip");
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -173,6 +175,7 @@ async function onVideoFound(video) {
   updateNativeSubtitlesSuppression();
 
   injectToggleButton();
+  hideTooltip();
 
   const tracks = await fetchSubtitleTracks();
   lastFetchedTracks = tracks;
@@ -760,6 +763,11 @@ function updateLine(lineEl, cues, timeMs) {
   if (!lineEl) return;
 
   if (!cues.length) {
+    if (lineEl.innerHTML !== "") {
+      lineEl.innerHTML = "";
+      lineEl.dataset.current = "";
+      hideTooltip();
+    }
     return;
   }
 
@@ -770,16 +778,110 @@ function updateLine(lineEl, cues, timeMs) {
 
   lineEl.dataset.current = newText;
   lineEl.innerHTML = "";
+  hideTooltip();
 
   if (!newText) return;
 
-  const lines = newText.split("\n");
-  lines.forEach((line, i) => {
-    const span = document.createElement("span");
-    span.textContent = line;
-    lineEl.appendChild(span);
-    if (i < lines.length - 1) lineEl.appendChild(document.createElement("br"));
+  const isJapanese = /[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/.test(newText);
+
+  if (isJapanese) {
+    lineEl.dataset.pendingIchi = "true";
+
+    const lines = newText.split("\\n");
+    lines.forEach((line, i) => {
+      const span = document.createElement("span");
+      span.textContent = line;
+      lineEl.appendChild(span);
+      if (i < lines.length - 1) lineEl.appendChild(document.createElement("br"));
+    });
+
+    chrome.runtime.sendMessage({ type: "FETCH_ICHI", text: newText }, (res) => {
+      if (lineEl.dataset.current !== newText) return;
+
+      if (res && res.ok && res.html) {
+        const parsed = parseIchiHtml(res.html);
+        renderIchiInteractiveLine(lineEl, parsed, newText);
+      }
+    });
+  } else {
+    const lines = newText.split("\\n");
+    lines.forEach((line, i) => {
+      const span = document.createElement("span");
+      span.textContent = line;
+      lineEl.appendChild(span);
+      if (i < lines.length - 1) lineEl.appendChild(document.createElement("br"));
+    });
+  }
+}
+
+function renderIchiInteractiveLine(lineEl, parsedData, originalText) {
+  lineEl.innerHTML = "";
+  delete lineEl.dataset.pendingIchi;
+
+  const charElements = [];
+  for (let i = 0; i < originalText.length; i++) {
+    charElements[i] = { char: originalText[i], word: null };
+  }
+
+  let currentOffset = 0;
+
+  parsedData.segments.forEach(segment => {
+    // Some segments from ichi.moe may drop spaces/newlines, so we search from currentOffset
+    const segmentTextStripped = segment.text.trim();
+    if (!segmentTextStripped) return;
+
+    // Find next non-whitespace match roughly
+    const segmentStart = originalText.indexOf(segment.text, currentOffset);
+    if (segmentStart !== -1) {
+      segment.words.forEach(word => {
+        if (word.start_index !== null && word.end_index !== null) {
+          for (let i = segmentStart + word.start_index; i < segmentStart + word.end_index; i++) {
+            if (charElements[i]) {
+              charElements[i].word = word;
+            }
+          }
+        }
+      });
+      currentOffset = segmentStart + segment.text.length;
+    }
   });
+
+  let currentWord = null;
+  let currentSpan = null;
+
+  for (let i = 0; i < charElements.length; i++) {
+    const item = charElements[i];
+
+    if (item.char === "\\n") {
+      lineEl.appendChild(document.createElement("br"));
+      currentWord = null;
+      currentSpan = null;
+      continue;
+    }
+
+    if (item.word !== currentWord || !item.word) {
+      currentWord = item.word;
+      currentSpan = document.createElement("span");
+      if (currentWord) {
+        const boundWord = currentWord;
+        currentSpan.className = "ichi-word";
+        currentSpan.dataset.wordData = JSON.stringify(boundWord);
+
+        currentSpan.addEventListener("mouseenter", (e) => {
+          showTooltip(boundWord, e.target.getBoundingClientRect());
+          if (state.settings && state.settings.pauseOnHover && state.video && !state.video.paused) {
+            state.video.pause();
+          }
+        });
+        currentSpan.addEventListener("mouseleave", () => {
+          hideTooltip();
+        });
+      }
+      lineEl.appendChild(currentSpan);
+    }
+
+    currentSpan.textContent += item.char;
+  }
 }
 
 // ── Settings ──────────────────────────────────────────────────────────────────
